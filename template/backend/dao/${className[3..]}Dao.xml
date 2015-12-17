@@ -1,0 +1,113 @@
+<#assign className = table.className?substring(3)>     
+<#assign classNameLower = className?uncap_first>   
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="${backendpackage}.dao.${className}Dao">
+	<resultMap type="${servicepackage}.pojo.${className}"
+		id="${classNameLower}Mapper">
+		<#list table.columns as column>  
+		<#if column.isDateTimeColumn>
+		<result property="${column.columnNameLower}" column="${column.underscoreName}"  javaType="java.util.Date" />
+		<#else> 
+		<result property="${column.columnNameLower}" column="${column.underscoreName}" />
+		</#if>
+		</#list>  
+	</resultMap>
+
+	<insert id="insert${className}" parameterType="${servicepackage}.pojo.${className}">
+		<selectKey resultType="String" order="BEFORE" keyProperty="id">
+			SELECT sys_guid() from DUAL
+		</selectKey>
+		INSERT INTO ${table.sqlName}(
+		<#list table.columns as column> 
+			<#if column_has_next>
+				${column.underscoreName},
+			<#else> 
+				${column.underscoreName}
+			</#if>
+		</#list> 
+		) VALUES(
+		<#list table.columns as column>  
+			<#if column_has_next>
+				<#if column.isDateTimeColumn>
+				sysdate,
+				<#else> 
+				${"#"}{${column.columnNameLower}},
+				</#if>
+			<#else> 
+				<#if column.isDateTimeColumn>
+				sysdate
+				<#else> 
+				${"#"}{${column.columnNameLower}}
+				</#if>
+			</#if>
+		</#list> 
+		)
+	</insert>
+	
+	<delete id="delete${className}">
+		DELETE FROM ${table.sqlName} WHERE id=${"#"}{id}
+	</delete>
+	
+	<update id="update${className}" parameterType="${servicepackage}.pojo.${className}">
+		UPDATE ${table.sqlName}
+		<set>
+			<#list table.columns as column> 
+			<#if column_has_next>
+				<if test="${column.columnNameLower} != null">
+					${column.underscoreName}=${"#"}{${column.columnNameLower}},
+				</if>
+			<#else> 
+				<if test="${column.columnNameLower} != null">
+					${column.underscoreName}=${"#"}{${column.columnNameLower}}
+				</if>
+			</#if>
+			</#list> 
+		</set>
+		WHERE id=${"#"}{id}
+	</update>
+	
+	<select id="get${className}ById" resultMap="${classNameLower}Mapper">
+		SELECT 
+		<#list table.columns as column> 
+			<#if column_has_next>
+				${column.underscoreName},
+			<#else> 
+				${column.underscoreName}
+			</#if>
+		</#list> 
+		FROM ${table.sqlName} WHERE id=${"#"}{id}
+	</select>
+	
+	<select id="get${className}s"
+		parameterType="${servicepackage}.pojo.condition.${className}Condition"
+		statementType="STATEMENT" resultMap="${classNameLower}Mapper">
+		SELECT * FROM (SELECT t.*, rownum rn FROM (
+		SELECT 
+		<#list table.columns as column> 
+			<#if column_has_next>
+				${column.underscoreName},
+			<#else> 
+				${column.underscoreName}
+			</#if>
+		</#list> 
+		FROM ${table.sqlName}
+		) t WHERE rownum<![CDATA[<=]]>${"$"}{page}*${"$"}{rows}) WHERE rn>(${"$"}{page} - 1)*${"$"}{rows}
+		<if test="asc != null and desc != null">
+			order by ${"$"}{asc} asc, ${"$"}{desc} desc
+		</if>
+		<if test="asc != null and desc == null">
+			order by ${"$"}{asc} asc
+		</if>
+		<if test="asc == null and desc != null">
+			order by ${"$"}{desc} desc
+		</if>
+	</select>
+	
+	<select id="getCount"
+		parameterType="${servicepackage}.pojo.condition.${className}Condition"
+		resultType="int">
+		SELECT count(*) FROM ${table.sqlName}
+	</select>
+	
+</mapper>
