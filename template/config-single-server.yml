@@ -1,0 +1,5 @@
+data:
+  env: config-dev
+  user:
+    username: spring-config-xiayuhui
+    password: 20200108
